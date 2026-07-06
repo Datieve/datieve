@@ -1278,6 +1278,7 @@ fn parse_desktop_file(path: &std::path::Path) -> Option<(String, String, Vec<Str
 pub fn get_apps_for_mime(mime_type: String, path: String) -> Vec<AppInfo> {
     #[cfg(target_os = "macos")]
     {
+        let _ = &mime_type;
         return get_apps_for_path_macos(&path);
     }
     #[cfg(not(target_os = "macos"))]
@@ -1325,13 +1326,18 @@ fn get_apps_for_path_macos(path: &str) -> Vec<AppInfo> {
     use objc2_foundation::NSURL;
 
     let Some(file_url) = (unsafe { NSURL::from_file_path(path) }) else { return Vec::new() };
-    let workspace = unsafe { NSWorkspace::sharedWorkspace() };
+    let workspace = NSWorkspace::sharedWorkspace();
     let urls = unsafe { workspace.URLsForApplicationsToOpenURL(&file_url) };
 
     let mut apps: Vec<AppInfo> = unsafe { urls.to_vec() }
         .into_iter()
         .filter_map(|url| {
-            let bundle_path = unsafe { url.path() }?.to_str().to_string();
+            // NSString::to_str needs proof we're inside an autorelease pool
+            // scope (the returned &str borrows from it).
+            let bundle_path = objc2::rc::autoreleasepool(|pool| {
+                let ns_path = unsafe { url.path() }?;
+                Some(unsafe { ns_path.to_str(pool) }.to_string())
+            })?;
             let name = std::path::Path::new(&bundle_path)
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
@@ -1446,10 +1452,11 @@ fn open_with_app_macos(app_id: String, path: String) -> Result<(), String> {
     use objc2_app_kit::NSWorkspace;
     use objc2_foundation::NSString;
 
-    let workspace = unsafe { NSWorkspace::sharedWorkspace() };
+    let workspace = NSWorkspace::sharedWorkspace();
     let ns_path = NSString::from_str(&path);
     let ns_app = NSString::from_str(&app_id);
-    let ok = unsafe { workspace.openFile_withApplication(&ns_path, Some(&ns_app)) };
+    #[allow(deprecated)]
+    let ok = workspace.openFile_withApplication(&ns_path, Some(&ns_app));
     if ok {
         Ok(())
     } else {
