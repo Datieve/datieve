@@ -1,0 +1,47 @@
+# ─── Local reference material ────────────────────────────────────────────────
+Files/
+
+# ─── Rust ────────────────────────────────────────────────────────────────────
+target/
+**/*.rs.bk
+
+# ─── Flutter / Dart ──────────────────────────────────────────────────────────
+app-flutter/.dart_tool/
+app-flutter/build/
+app-flutter/.flutter-plugins
+app-flutter/.flutter-plugins-dependencies
+app-flutter/.fvm/
+app-flutter/linux/flutter/ephemeral/
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ─── Agent runtime artifacts (certs, db, built binaries) ─────────────────────
+bins/
+*.db
+*.db-shm
+*.db-wal
+*.crt
+*.tls.key
+*.fingerprint
+*.fingerprint.der
+
+# ─── CI release artifacts ────────────────────────────────────────────────────
+*.AppImage
+*.tar.gz
+*.zip
+*.dmg
+*.deb
+*.rpm
+*.exe

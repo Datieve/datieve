@@ -1,0 +1,22 @@
+# Rust build artifacts
+/target/
+Cargo.lock.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Local test files (created during debugging sessions)
+test_serialize.rs
+test_serialize.long-type-*.txt
+data/
+
+# Docker build artefacts
+datieve-agent.tar
+datieve-agent.tar.gz
+
+# Local config used for testing (never commit real keys)
+config.json

@@ -1,0 +1,258 @@
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write   # needed to create releases and upload assets
+
+env:
+  FLUTTER_CHANNEL: stable
+  FLUTTER_VERSION: '3.x'
+
+jobs:
+  # Agent (Rust, Linux musl static binary)
+  agent:
+    name: Agent · Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - run: sudo apt-get update -q && sudo apt-get install -y musl-tools
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent -> target
+
+      - name: Build
+        working-directory: agent
+        env:
+          CC_x86_64_unknown_linux_musl: x86_64-linux-musl-gcc
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Package
+        run: |
+          cp agent/target/x86_64-unknown-linux-musl/release/datieve datieve-agent
+          tar czf datieve-agent-linux-x86_64.tar.gz datieve-agent
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            datieve-agent
+            datieve-agent-linux-x86_64.tar.gz
+
+
+  # Flutter app · Linux AppImage / Windows installer / macOS DMG
+  # Consolidated into one matrix job — setup steps are identical across all
+  # three platforms; only build and package steps below are platform-specific.
+  app:
+    name: App · ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    needs: agent
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+            artifact: datieve-linux-x86_64.AppImage
+          - os: windows-latest
+            name: Windows
+            artifact: datieve-windows-x86_64-setup.exe
+          - os: macos-latest
+            name: macOS
+            artifact: datieve-macos.dmg
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Rust bridge compilation cache (flutter build compiles app-flutter/rust/ via cargokit)
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app-flutter/rust -> target
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      # pub-cache lives in a different spot on Windows, so this is split in two
+      # rather than parameterized in the matrix (matrix values are static and
+      # can't reference runner env vars like %LOCALAPPDATA%).
+      - name: Cache pub packages (Linux/macOS)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v5
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('app-flutter/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Cache pub packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.LOCALAPPDATA }}\Pub\Cache
+          key: pub-${{ runner.os }}-${{ hashFiles('app-flutter/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      # Scaffold the windows/ or macos/ platform directory if it hasn't been
+      # committed yet. flutter create is idempotent — won't overwrite existing files.
+      - name: Scaffold platform folder
+        if: runner.os != 'Linux'
+        working-directory: app-flutter
+        run: flutter create --platforms=${{ runner.os == 'Windows' && 'windows' || 'macos' }} .
+
+      # super_drag_and_drop requires OleInitialize (not CoInitializeEx) for
+      # RegisterDragDrop to work. Flutter's generated runner uses CoInitializeEx,
+      # so we patch it here. OleInitialize internally calls CoInitializeEx with
+      # COINIT_APARTMENTTHREADED and also initialises the OLE subsystem.
+      - name: Patch Windows runner — OleInitialize for drag-drop
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: app-flutter
+        run: |
+          $file = "windows\runner\main.cpp"
+          (Get-Content $file) -replace '::CoInitializeEx\(nullptr, COINIT_APARTMENTTHREADED\)', '::OleInitialize(nullptr)' |
+            Set-Content $file
+
+      - run: flutter pub get
+        working-directory: app-flutter
+
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            ninja-build \
+            libgtk-3-dev \
+            libblkid-dev \
+            liblzma-dev \
+            libsecret-1-dev \
+            pkg-config \
+            imagemagick
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: flutter build linux --release
+        working-directory: app-flutter
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: flutter build windows --release
+        working-directory: app-flutter
+
+      # Xcode build settings passed as env vars — flutter build macos does not
+      # accept them after `--` (Flutter treats those as target file names).
+      # Builds unsigned; the packaging step below ad-hoc signs so Apple Silicon
+      # can execute the binary at all (without any signature it refuses to run it.
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        env:
+          CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGNING_REQUIRED: "NO"
+        run: flutter build macos --release
+        working-directory: app-flutter
+
+      - name: Package Linux (AppImage)
+        if: runner.os == 'Linux'
+        run: |
+          BUNDLE="app-flutter/build/linux/x64/release/bundle"
+          APPDIR="AppDir"
+
+          # Flutter expects lib/ and data/ relative to the binary,
+          # so we put the whole bundle under usr/bin/ and cd there from AppRun.
+          mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+          cp -a "$BUNDLE/." "$APPDIR/usr/bin/"
+
+          # App icon — use the resource from the Linux runner if present, else generate one
+          ICON="app-flutter/linux/runner/resources/app_icon.png"
+          if [ -f "$ICON" ]; then
+            cp "$ICON" "$APPDIR/datieve.png"
+          else
+            convert -size 256x256 xc:'#1a56db' \
+              -fill white -gravity Center -font DejaVu-Sans-Bold -pointsize 72 \
+              -draw "text 0,0 'D'" "$APPDIR/datieve.png"
+          fi
+          cp "$APPDIR/datieve.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/datieve.png"
+
+          printf '%s\n' \
+            '[Desktop Entry]' \
+            'Name=Datieve' \
+            'Exec=datieve' \
+            'Icon=datieve' \
+            'Type=Application' \
+            'Categories=Utility;FileManager;' \
+            'Comment=File manager with NAS agent integration' \
+            > "$APPDIR/datieve.desktop"
+
+          printf '%s\n' \
+            '#!/bin/bash' \
+            'HERE="$(dirname "$(readlink -f "${0}")")"' \
+            'cd "${HERE}/usr/bin"' \
+            'exec "./datieve" "$@"' \
+            > "$APPDIR/AppRun"
+          chmod +x "$APPDIR/AppRun"
+
+          # appimagetool is itself an AppImage; --appimage-extract-and-run avoids needing FUSE
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+               -O appimagetool
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR" datieve-linux-x86_64.AppImage
+
+      - name: Package Windows (installer)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          $release = "app-flutter\build\windows\x64\runner\Release"
+          @"
+          [Setup]
+          AppName=Datieve
+          AppVersion=$ver
+          AppPublisher=Datieve
+          DefaultDirName={autopf}\Datieve
+          DefaultGroupName=Datieve
+          OutputDir=.
+          OutputBaseFilename=datieve-windows-x86_64-setup
+          Compression=lzma
+          SolidCompression=yes
+          ArchitecturesInstallIn64BitMode=x64
+          MinVersion=10.0
+
+          [Files]
+          Source: "$release\*"; DestDir: "{app}"; Flags: recursesubdirs
+
+          [Icons]
+          Name: "{group}\Datieve"; Filename: "{app}\datieve.exe"
+          Name: "{autodesktop}\Datieve"; Filename: "{app}\datieve.exe"
+
+          [Run]
+          Filename: "{app}\datieve.exe"; Description: "Launch Datieve"; Flags: postinstall nowait
+          "@ | Out-File -Encoding ASCII datieve.iss
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' datieve.iss
+
+      - name: Package macOS (DMG)
+        if: runner.os == 'macOS'
+        run: |
+          APP=$(find app-flutter/build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
+          # Ad-hoc sign so Apple Silicon can execute the binary. This does not
+          # bypass the "unidentified developer" first-run prompt — that requires
+          # real notarization — but without any signature arm64 refuses to run it.
+          codesign --force --deep --sign - "$APP"
+          hdiutil create \
+            -volname "Datieve" \
+            -srcfolder "$APP" \
+            -ov -format UDZO \
+            datieve-macos.dmg
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ matrix.artifact }}

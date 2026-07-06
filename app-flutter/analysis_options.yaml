@@ -1,0 +1,28 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Treat null-safety and type issues as hard compilation errors (Rust-style)
+    invalid_null_aware_operator: error
+    null_check_on_nullable_type_parameter: error
+    unchecked_use_of_nullable_value: error
+    
+    # Treat hygiene and logic warnings as compilation errors
+    dead_code: error
+    unused_local_variable: error
+    unused_import: error
+    unused_field: error
+
+  exclude:
+    - lib/src/rust/**
+
+linter:
+  rules:
+    avoid_print: true
+    prefer_single_quotes: true
+    unnecessary_null_checks: true
+    prefer_null_aware_operators: true
