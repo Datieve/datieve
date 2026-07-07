@@ -272,10 +272,10 @@ mod commands {
             .await
             .map_err(|e| {
                 if e.kind() == std::io::ErrorKind::AddrInUse {
-                    AppError::Internal(
-                        "Port 34514 is already in use. Ensure no other process is bound to it and restart the agent."
-                            .into(),
-                    )
+                    AppError::Internal(format!(
+                        "Port {} is already in use on {}. Ensure no other process is bound to it and restart the agent.",
+                        cfg.port, cfg.bind_address
+                    ))
                 } else {
                     AppError::Internal(e.to_string())
                 }

@@ -25,6 +25,24 @@ use crate::api::AppState;
 use crate::error::AppError;
 use rusqlite::OptionalExtension;
 
+/// Naming the NAS during setup is redundant when only one agent is ever
+/// reachable at a given address - default to the machine's own hostname
+/// instead of requiring an extra manual-entry step.
+fn default_friendly_name() -> String {
+    let mut buf = [0u8; 256];
+    let ok = unsafe { libc::gethostname(buf.as_mut_ptr().cast(), buf.len()) } == 0;
+    if ok {
+        if let Some(len) = buf.iter().position(|&b| b == 0) {
+            if let Ok(name) = std::str::from_utf8(&buf[..len]) {
+                if !name.trim().is_empty() {
+                    return name.trim().to_string();
+                }
+            }
+        }
+    }
+    "Datieve Agent".to_string()
+}
+
 fn verify_admin_code(code: &str, stored_hash: &str) -> bool {
     crate::auth::password::verify(&crate::auth::admin_code_preimage(code), stored_hash)
         .unwrap_or(false)
@@ -173,10 +191,7 @@ pub async fn finalize_setup(
         return Err(AppError::Forbidden("Setup already completed".into()));
     }
 
-    if payload.friendly_name.trim().is_empty() {
-        return Err(AppError::BadRequest("Name required".into()));
-    }
-    tracing::info!("Desktop app submitted final setup configuration.");
+    tracing::info!("Setup configuration submitted.");
     if payload.app_admin_code.is_empty() {
         return Err(AppError::BadRequest("Admin code required".into()));
     }
@@ -268,7 +283,11 @@ pub async fn finalize_setup(
     let config_path = state.config_path.clone();
     let exclusions = payload.exclusion_patterns.clone();
     let scanner_exclusions = exclusions.clone();
-    let friendly_name = payload.friendly_name.clone();
+    let friendly_name = if payload.friendly_name.trim().is_empty() {
+        default_friendly_name()
+    } else {
+        payload.friendly_name.clone()
+    };
     let app_admin_code = payload.app_admin_code.clone();
     let new_admin_username = payload.admin_username.trim().to_string();
     let manage_username = payload.manage_username.trim().to_string();

@@ -467,8 +467,25 @@ fn process_event(
     }
 }
 
-fn relative_path(_root: &InotifyRoot, abs: &Path) -> String {
-    abs.to_string_lossy().into_owned()
+/// Path relative to the watched root, e.g. `/docs/file.txt` - matches the
+/// format scanner.rs's `relative_path_str` produces for the initial scan.
+///
+/// This used to just return the absolute path unchanged, which the writer
+/// then split on `/` to build the folder hierarchy - recreating the OS's
+/// entire real directory structure as a nested, duplicated tree *inside*
+/// the actual watched folder (and since the watched root's own leaf name
+/// is one of those path components, it would reappear as a phantom child
+/// of itself).
+fn relative_path(root: &InotifyRoot, abs: &Path) -> String {
+    let relative = abs
+        .strip_prefix(&root.root)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| abs.to_string_lossy().into_owned());
+    if relative.starts_with('/') {
+        relative
+    } else {
+        format!("/{relative}")
+    }
 }
 
 fn is_excluded(root: &InotifyRoot, abs: &Path) -> bool {

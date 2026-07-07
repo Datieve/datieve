@@ -407,7 +407,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       _OpenFileIntent: fileOp<_OpenFileIntent>((_) {
         // Also advances the setup wizard while it is active.
         if (state.nasInlinePhase == 'setup' && !state.setupLoading) {
-          if (state.setup.step >= 7) state.setupFinish(); else state.setupNext();
+          if (state.setup.step >= 6) state.setupFinish(); else state.setupNext();
           return null;
         }
         if (state.fmSelectedFile != null) {

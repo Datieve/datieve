@@ -1,7 +1,6 @@
-pub const TOTAL_STEPS: i32 = 7;
+pub const TOTAL_STEPS: i32 = 6;
 
-pub const STEP_TITLES: [&str; 7] = [
-    "Agent",
+pub const STEP_TITLES: [&str; 6] = [
     "Admin",
     "Folders",
     "Exclusions",
@@ -10,8 +9,7 @@ pub const STEP_TITLES: [&str; 7] = [
     "Confirm",
 ];
 
-pub const STEP_DESCS: [&str; 7] = [
-    "Give this agent a name shown during discovery.",
+pub const STEP_DESCS: [&str; 6] = [
     "Set a password for the admin account.",
     "Define the root directories to index.",
     "Filter what to ignore during indexing.",
@@ -67,12 +65,11 @@ impl SetupForm {
 
     pub fn validate_step(&self) -> Result<(), String> {
         match self.step {
-            1 if self.friendly_name.trim().is_empty() => Err("Agent name is required.".into()),
-            2 if self.admin_code.trim().is_empty() => Err("Admin password is required.".into()),
-            3 if self.valid_watched_paths().is_empty() => {
+            1 if self.admin_code.trim().is_empty() => Err("Admin password is required.".into()),
+            2 if self.valid_watched_paths().is_empty() => {
                 Err("Add at least one folder to index.".into())
             }
-            6 if self.manage_password.trim().is_empty() => {
+            5 if self.manage_password.trim().is_empty() => {
                 Err("Management password is required.".into())
             }
             _ => Ok(()),
@@ -83,7 +80,7 @@ impl SetupForm {
         let paths = self.valid_watched_paths().join("\n  ");
         format!(
             "Agent: {} ({})\nIndexed paths:\n  {}\nAdmin: {}\nUsers: {}\nManagement: {}",
-            self.friendly_name,
+            agent_ip,
             agent_ip,
             paths,
             self.admin_username,
@@ -103,7 +100,7 @@ impl SetupForm {
             patterns.push(".*".into());
         }
         serde_json::json!({
-            "friendly_name": self.friendly_name.trim(),
+            "friendly_name": "",
             "watched_paths": self.valid_watched_paths(),
             "exclusion_patterns": patterns,
             "app_admin_code": self.admin_code.trim(),

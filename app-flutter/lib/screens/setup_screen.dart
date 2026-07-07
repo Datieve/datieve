@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../src/rust/api/fs.dart';
 import '../src/rust/bridge.dart';
 import '../state/datieve_state.dart';
 import '../theme/css_tokens.dart';
@@ -11,7 +12,7 @@ import '../widgets/ui/button.dart';
 import '../widgets/ui/input.dart';
 import '../widgets/datieve_widgets.dart';
 
-const _totalSteps = 7;
+const _totalSteps = 6;
 
 /// Exact port of `SetupWizard` from App.tsx (lines 676–1097).
 class SetupScreen extends StatelessWidget {
@@ -300,6 +301,23 @@ class _StepBodyState extends State<_StepBody> {
   List<String> _validWatchedPaths(SetupStateDto s) =>
       s.watchedPaths.map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
 
+  bool _agentIsLocal(DatieveState state) {
+    final ip = state.agent?.ip.trim().toLowerCase() ?? '';
+    return ip == '127.0.0.1' ||
+        ip == 'localhost' ||
+        ip == '::1' ||
+        ip.startsWith('127.');
+  }
+
+  void _browseWatchedPath(SetupStateDto s, int index) {
+    if (!_agentIsLocal(widget.state)) return;
+    final picked = pickFolder();
+    if (picked == null || picked.trim().isEmpty) return;
+    final paths = List<String>.from(s.watchedPaths);
+    paths[index] = picked;
+    widget.state.patchSetup(s.copyWith(watchedPaths: paths));
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.state.colors;
@@ -308,14 +326,6 @@ class _StepBodyState extends State<_StepBody> {
 
     switch (s.step) {
       case 1:
-        return DatieveUiInput(
-          label: 'Agent Name',
-          placeholder: 'e.g. Home Server',
-          value: s.friendlyName,
-          colors: c,
-          onChanged: (v) => widget.state.patchSetup(s.copyWith(friendlyName: v)),
-        );
-      case 2:
         final mismatch = _confirmAdmin.isNotEmpty && _confirmAdmin != s.adminCode;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -360,7 +370,7 @@ class _StepBodyState extends State<_StepBody> {
             ),
           ],
         );
-      case 3:
+      case 2:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -385,7 +395,7 @@ class _StepBodyState extends State<_StepBody> {
                     _IconFieldButton(
                       icon: LucideIcons.folder,
                       colors: c,
-                      onPressed: () {},
+                      onPressed: () => _browseWatchedPath(s, i),
                     ),
                     if (s.watchedPaths.length > 1) ...[
                       const SizedBox(width: 8),
@@ -425,7 +435,7 @@ class _StepBodyState extends State<_StepBody> {
             ),
           ],
         );
-      case 4:
+      case 3:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -536,7 +546,7 @@ class _StepBodyState extends State<_StepBody> {
             ),
           ],
         );
-      case 5:
+      case 4:
         final roots = _validWatchedPaths(s);
         _ensureConfirmUsers(s.users.length);
         return Column(
@@ -743,7 +753,7 @@ class _StepBodyState extends State<_StepBody> {
             ),
           ],
         );
-      case 6:
+      case 5:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -787,8 +797,11 @@ class _StepBodyState extends State<_StepBody> {
             ],
           ],
         );
-      case 7:
+      case 6:
         final roots = _validWatchedPaths(s);
+        final agentLabel = widget.state.agent?.hostname.isNotEmpty == true
+            ? widget.state.agent!.hostname
+            : (widget.state.agent?.ip ?? 'Agent');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -810,7 +823,7 @@ class _StepBodyState extends State<_StepBody> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        s.friendlyName,
+                        agentLabel,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,

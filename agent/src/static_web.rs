@@ -29,6 +29,12 @@ fn serve_embedded(path: &str) -> Option<Response> {
     let mime = mime_guess::from_path(path).first_or_octet_stream();
     Response::builder()
         .header(header::CONTENT_TYPE, mime.as_ref())
+        .header(
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+        )
+        .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
+        .header(header::REFERRER_POLICY, "strict-origin-when-cross-origin")
         .body(Body::from(asset.data.into_owned()))
         .ok()
 }

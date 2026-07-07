@@ -248,7 +248,7 @@ class _AgentList extends StatelessWidget {
             ),
           ),
         TextButton(
-          onPressed: connecting != null ? null : () => state.refreshDiscovery(),
+          onPressed: connecting != null ? null : () => state.refreshDiscovery(autoSelect: true),
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             foregroundColor: tw.slate400,
@@ -478,7 +478,7 @@ class _EmptyState extends StatelessWidget {
                 label: 'Retry',
                 variant: DatieveButtonVariant.secondary,
                 colors: c,
-                onPressed: () => state.refreshDiscovery(),
+                onPressed: () => state.refreshDiscovery(autoSelect: true),
               ),
               DatieveUiButton(
                 label: 'Change port',
@@ -503,7 +503,7 @@ class _EmptyState extends StatelessWidget {
                       borderRadius: BorderRadius.circular(Tw.radiusXl),
                     ),
                     child: Text(
-                      'Enter the port your agent is listening on. The default is 34514. You can change the port in Settings → Network once connected.',
+                      "Enter the port your agent is listening on. The default is $port. You can change the port in Settings → Network once connected.",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
@@ -512,58 +512,99 @@ class _EmptyState extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: TextEditingController(text: state.portDraft)
-                            ..selection = TextSelection.collapsed(
-                              offset: state.portDraft.length,
-                            ),
-                          onChanged: (v) => state.portDraft = v,
-                          keyboardType: TextInputType.number,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'monospace',
-                            color: tw.ink,
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: tw.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(Tw.radiusXl),
-                              borderSide: BorderSide(color: tw.slate200),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(Tw.radiusXl),
-                              borderSide: BorderSide(color: tw.slate200),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(Tw.radiusXl),
-                              borderSide: BorderSide(color: tw.slate900),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      DatieveUiButton(
-                        label: 'Scan',
-                        colors: c,
-                        onPressed: state.applyPort,
-                      ),
-                    ],
-                  ),
+                  _PortInputRow(state: state, colors: c),
                 ],
               ),
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _PortInputRow extends StatefulWidget {
+  final DatieveState state;
+  final DatieveColors colors;
+
+  const _PortInputRow({required this.state, required this.colors});
+
+  @override
+  State<_PortInputRow> createState() => _PortInputRowState();
+}
+
+class _PortInputRowState extends State<_PortInputRow> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.state.portDraft);
+  }
+
+  @override
+  void didUpdateWidget(_PortInputRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.portDraft != widget.state.portDraft &&
+        _controller.text != widget.state.portDraft) {
+      _controller.text = widget.state.portDraft;
+      _controller.selection = TextSelection.collapsed(
+        offset: widget.state.portDraft.length,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tw = Tw(widget.colors);
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            onChanged: (v) => widget.state.portDraft = v,
+            keyboardType: TextInputType.number,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'monospace',
+              color: tw.ink,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: tw.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tw.radiusXl),
+                borderSide: BorderSide(color: tw.slate200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tw.radiusXl),
+                borderSide: BorderSide(color: tw.slate200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(Tw.radiusXl),
+                borderSide: BorderSide(color: tw.slate900),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        DatieveUiButton(
+          label: 'Scan',
+          colors: widget.colors,
+          onPressed: widget.state.applyPort,
+        ),
+      ],
     );
   }
 }

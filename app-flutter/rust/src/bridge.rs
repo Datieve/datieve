@@ -168,12 +168,12 @@ impl DatieveBridge {
                 needs_setup_reset: false,
             };
         }
-        // Token is missing or expired — try to silently re-login with any stored code.
+        // Token is missing or expired — silently re-login only when exactly one
+        // saved account exists. Two or more: show the picker instead of guessing.
         let mut accounts = accounts;
-        let api = crate::agent_api::AgentApi::new(core.clone());
-        let mut i = 0;
-        while i < accounts.len() {
-            match api.login(&agent.ip, &accounts[i].code).await {
+        if accounts.len() == 1 {
+            let api = crate::agent_api::AgentApi::new(core.clone());
+            match api.login(&agent.ip, &accounts[0].code).await {
                 Ok(new_sess) => {
                     let _ = persist_session(&agent.ip, &new_sess);
                     let dtos: Vec<_> = accounts.iter().cloned().map(Into::into).collect();
@@ -185,12 +185,10 @@ impl DatieveBridge {
                     };
                 }
                 Err(_) => {
-                    // Code rejected — remove it so the user isn't shown a stale account.
-                    accounts.remove(i);
+                    accounts.remove(0);
                     let _ = crate::session::save_accounts(&agent.ip, &accounts);
                 }
             }
-            i += 1;
         }
         RouteDecision {
             screen: "login".into(),

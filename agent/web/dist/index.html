@@ -8,10 +8,19 @@
 </head>
 <body class="text-sm">
 
-<div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+<div id="login-screen" class="hidden min-h-screen flex items-center justify-center px-4">
   <div class="w-full max-w-xs rounded-2xl border border-line bg-panel p-6 shadow-sm">
-    <h1 class="text-base font-bold mb-1" id="login-title">Datieve</h1>
+    <div class="flex items-center justify-between mb-1">
+      <h1 class="text-base font-bold" id="login-title">Datieve</h1>
+      <button id="theme-toggle-btn" type="button" class="text-muted hover:text-brand transition-colors" title="Toggle theme"></button>
+    </div>
     <p class="text-xs text-muted mb-4" id="login-subtitle">Enter your access code</p>
+
+    <div id="account-list" class="hidden space-y-1.5 mb-3"></div>
+    <button id="login-use-different-code" class="hidden w-full text-center text-xs text-brand hover:text-brand-hover mb-3 transition-colors">
+      Use a different code
+    </button>
+
     <form id="login-form">
       <input id="login-code" type="password" autocomplete="off" placeholder="Access code"
              class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm mb-3 outline-none focus:border-brand" />
@@ -20,53 +29,134 @@
         Sign in
       </button>
     </form>
+    <button id="login-back-to-accounts" class="hidden w-full text-center text-xs text-muted hover:text-ink mt-3 transition-colors">
+      &larr; Back to accounts
+    </button>
     <p id="login-error" class="text-xs text-danger mt-3 hidden"></p>
-    <p id="login-setup-warning" class="text-xs text-warn mt-3 hidden">
-      This agent hasn't finished setup yet. Use the Datieve desktop app to configure it first.
-    </p>
+  </div>
+</div>
+
+<div id="setup-screen" class="hidden min-h-screen flex items-center justify-center px-4 py-10 overflow-y-auto">
+  <div class="w-full max-w-2xl rounded-2xl border border-line bg-panel p-6 shadow-sm my-auto">
+    <div class="flex items-center justify-between mb-1">
+      <h1 class="text-base font-bold">Set up <span id="setup-hostname" class="text-muted font-normal"></span></h1>
+      <button id="theme-toggle-btn-setup" type="button" class="text-muted hover:text-brand transition-colors" title="Toggle theme"></button>
+    </div>
+    <p class="text-xs text-muted mb-5">First-time configuration for this agent. This only needs to be done once.</p>
+
+    <section class="mb-5">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Admin account</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-xs">
+          <span class="text-muted">Admin username</span>
+          <input id="setup-admin-username" type="text" value="admin" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" />
+        </label>
+        <label class="flex flex-col gap-1 text-xs">
+          <span class="text-muted">Admin access code</span>
+          <input id="setup-admin-code" type="password" autocomplete="off" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" />
+        </label>
+      </div>
+    </section>
+
+    <section class="mb-5">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Watched folders</h2>
+      <p class="text-[11px] text-faint mb-2">Absolute paths on this machine to index (e.g. /mnt/storage/media).</p>
+      <div id="setup-folders-list" class="space-y-2 mb-2"></div>
+      <button id="setup-add-folder" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add path</button>
+    </section>
+
+    <section class="mb-5">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Exclusions</h2>
+      <label class="flex items-center gap-2 text-xs mb-2">
+        <input id="setup-exclude-hidden" type="checkbox" checked class="rounded border-line" />
+        <span class="text-muted">Exclude hidden files (dotfiles)</span>
+      </label>
+      <div id="setup-patterns-list" class="space-y-2 mb-2"></div>
+      <button id="setup-add-pattern" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add exclusion pattern</button>
+    </section>
+
+    <section class="mb-5">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Additional users (optional)</h2>
+      <div id="setup-users-list" class="space-y-3 mb-2"></div>
+      <button id="setup-add-user" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add user</button>
+    </section>
+
+    <section class="mb-5">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Management password</h2>
+      <p class="text-[11px] text-faint mb-2">A separate password guarding sensitive settings changes, independent of access codes.</p>
+      <input id="setup-manage-password" type="password" autocomplete="off" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-xs outline-none focus:border-brand" />
+    </section>
+
+    <p id="setup-error" class="text-xs text-danger mb-3 hidden"></p>
+    <button id="setup-submit" class="w-full rounded-lg bg-brand-solid text-on-brand text-sm font-medium py-2 hover:bg-brand-hover transition-colors">Deploy</button>
   </div>
 </div>
 
 <div id="app-shell" class="hidden min-h-screen flex flex-col">
-  <header class="flex items-center gap-3 border-b border-line bg-panel px-4 py-2">
+  <header class="relative flex items-center gap-3 border-b border-line bg-panel px-4 py-2">
     <button id="home-btn" class="text-sm font-semibold shrink-0 hover:text-brand transition-colors">Datieve</button>
-    <nav id="breadcrumbs" class="flex items-center gap-1 text-xs text-muted overflow-x-auto whitespace-nowrap"></nav>
-    <div class="flex-1"></div>
-    <div class="relative">
-      <input id="search-input" type="search" placeholder="Search files…"
-             class="w-56 sm:w-64 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs outline-none focus:border-brand" />
+    <div class="flex-1 min-w-0"></div>
+    <nav id="breadcrumbs" class="shrink max-w-[55%] flex items-center gap-0.5 h-8 px-1.5 rounded-lg border border-line bg-panel-muted overflow-x-auto whitespace-nowrap text-xs"></nav>
+    <div class="flex-1 min-w-0"></div>
+    <div class="relative shrink-0">
+      <button id="search-toggle-btn"
+              class="text-muted hover:text-brand transition-colors border border-line rounded-lg p-1.5 hover:border-line-strong"
+              title="Search"></button>
+      <div id="search-popover" class="hidden absolute right-0 top-full mt-1 w-64 rounded-xl border border-line bg-panel shadow-lg p-2 z-20">
+        <input id="search-input" type="search" placeholder="Search files…"
+               class="w-full rounded-lg border border-line bg-bg px-3 py-1.5 text-xs outline-none focus:border-brand" />
+      </div>
     </div>
-    <button id="filters-toggle"
-            class="text-xs text-muted border border-line rounded-lg px-2 py-1.5 hover:border-line-strong transition-colors">
-      Filters
-    </button>
-    <span id="whoami" class="text-xs text-muted hidden sm:inline"></span>
-    <button id="logout-btn" class="text-xs text-danger hover:underline">Log out</button>
+    <button id="filters-toggle-btn"
+            class="shrink-0 text-muted hover:text-brand transition-colors border border-line rounded-lg p-1.5 hover:border-line-strong"
+            title="Filters"></button>
+    <button id="whoami" type="button" class="shrink-0 text-xs text-muted hidden sm:inline hover:text-brand transition-colors cursor-pointer" title="Switch account"></button>
+    <button id="manage-btn" type="button" class="hidden shrink-0 text-xs text-brand hover:text-brand-hover transition-colors">Manage</button>
+    <button id="logout-btn" class="shrink-0 text-xs text-danger hover:underline">Log out</button>
   </header>
 
-  <div id="filters-panel" class="hidden border-b border-line bg-panel-soft px-4 py-2 flex flex-wrap items-end gap-3 text-xs">
-    <label class="flex flex-col gap-1">
-      <span class="text-muted">Min size (MB)</span>
-      <input id="filter-size-min" type="number" min="0" class="w-24 rounded-lg border border-line bg-panel px-2 py-1 outline-none focus:border-brand" />
-    </label>
-    <label class="flex flex-col gap-1">
-      <span class="text-muted">Max size (MB)</span>
-      <input id="filter-size-max" type="number" min="0" class="w-24 rounded-lg border border-line bg-panel px-2 py-1 outline-none focus:border-brand" />
-    </label>
-    <label class="flex flex-col gap-1">
-      <span class="text-muted">Modified after</span>
-      <input id="filter-modified-after" type="date" class="rounded-lg border border-line bg-panel px-2 py-1 outline-none focus:border-brand" />
-    </label>
-    <label class="flex flex-col gap-1">
-      <span class="text-muted">Modified before</span>
-      <input id="filter-modified-before" type="date" class="rounded-lg border border-line bg-panel px-2 py-1 outline-none focus:border-brand" />
-    </label>
-    <label class="flex items-center gap-1.5 pb-1.5">
-      <input id="filter-include-deleted" type="checkbox" class="rounded border-line" />
-      <span class="text-muted">Include deleted</span>
-    </label>
-    <button id="filters-apply" class="rounded-lg bg-brand-solid text-on-brand px-3 py-1.5 font-medium hover:bg-brand-hover transition-colors">Apply</button>
-    <button id="filters-clear" class="text-muted hover:text-ink transition-colors">Clear</button>
+  <div id="filters-panel" class="hidden border-b border-line bg-panel-soft px-4 py-2">
+    <div class="flex flex-wrap items-end gap-4">
+      <div class="flex flex-col gap-1">
+        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Size</span>
+        <div class="flex items-center gap-1.5">
+          <input id="filter-size-min" type="number" min="0" placeholder="0" class="w-14 rounded-md border border-line bg-panel px-1.5 py-1 text-xs outline-none focus:border-brand" />
+          <span class="text-muted text-xs">–</span>
+          <input id="filter-size-max" type="number" min="0" placeholder="&#8734;" class="w-14 rounded-md border border-line bg-panel px-1.5 py-1 text-xs outline-none focus:border-brand" />
+          <select id="filter-size-unit" class="rounded-md border border-line bg-panel px-1 py-1 text-xs outline-none focus:border-brand">
+            <option value="KB">KB</option>
+            <option value="MB" selected>MB</option>
+            <option value="GB">GB</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Created</span>
+        <select id="filter-created-range" class="w-36 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand"></select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Modified</span>
+        <select id="filter-modified-range" class="w-36 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand"></select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Type</span>
+        <select id="filter-type" class="w-32 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand">
+          <option value="all">All items</option>
+          <option value="folders">Folders</option>
+          <option value="files">Files</option>
+          <option value="images">Images</option>
+          <option value="documents">Documents</option>
+          <option value="media">Media</option>
+          <option value="archives">Archives</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-1.5 pb-1">
+        <input id="filter-include-deleted" type="checkbox" class="rounded border-line" />
+        <span class="text-muted text-xs">Include deleted</span>
+      </label>
+      <button id="filters-apply" class="h-[26px] rounded-md bg-brand-solid text-on-brand px-3 text-xs font-semibold hover:bg-brand-hover transition-colors">Apply</button>
+      <button id="filters-clear" class="text-xs text-muted hover:text-ink transition-colors">Clear</button>
+    </div>
   </div>
 
   <div class="flex flex-1 min-h-0">
@@ -74,8 +164,8 @@
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-xs font-semibold text-muted uppercase tracking-wide">Bookmarks</h2>
         <button id="bookmark-here-btn"
-                class="text-xs text-brand hover:text-brand-hover transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                title="Bookmark current folder">+ Add</button>
+                class="flex items-center gap-1 text-xs text-brand hover:text-brand-hover transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                title="Bookmark current folder"></button>
       </div>
       <ul id="bookmarks-list" class="space-y-1"></ul>
       <p id="bookmarks-empty" class="text-xs text-faint mt-2 hidden">No bookmarks yet.</p>
@@ -98,6 +188,35 @@
     </main>
   </div>
 </div>
+
+<div id="manage-overlay" class="hidden fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="w-full max-w-3xl max-h-[90vh] rounded-2xl border border-line bg-panel shadow-lg flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between border-b border-line px-4 py-3 shrink-0">
+      <h2 class="text-sm font-semibold">Management Console</h2>
+      <button id="manage-close-btn" type="button" class="text-muted hover:text-ink transition-colors" title="Close"></button>
+    </div>
+    <div id="manage-gate" class="p-6 overflow-y-auto">
+      <p class="text-xs text-muted mb-3">Enter the management password to change agent settings.</p>
+      <input id="manage-gate-password" type="password" autocomplete="off" placeholder="Management password"
+             class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm mb-3 outline-none focus:border-brand" />
+      <p id="manage-gate-error" class="text-xs text-danger mb-3 hidden"></p>
+      <button id="manage-gate-submit" type="button"
+              class="w-full rounded-lg bg-brand-solid text-on-brand text-sm font-medium py-2 hover:bg-brand-hover transition-colors">Unlock</button>
+    </div>
+    <div id="manage-body" class="hidden flex flex-col min-h-0 flex-1">
+      <div id="manage-tabs" class="flex gap-1 border-b border-line px-4 py-2 shrink-0 overflow-x-auto text-xs"></div>
+      <div id="manage-content" class="p-4 overflow-y-auto flex-1 text-xs"></div>
+      <div class="border-t border-line px-4 py-2 shrink-0 flex items-center gap-2">
+        <input id="manage-save-password" type="password" autocomplete="off" placeholder="Management password to save"
+               class="flex-1 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs outline-none focus:border-brand" />
+        <button id="manage-save-btn" type="button"
+                class="rounded-lg bg-brand-solid text-on-brand px-3 py-1.5 text-xs font-medium hover:bg-brand-hover transition-colors">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-4 right-4 rounded-lg border border-line bg-panel px-3 py-2 text-xs shadow-lg z-30"></div>
 
 <script src="/app.js"></script>
 </body>

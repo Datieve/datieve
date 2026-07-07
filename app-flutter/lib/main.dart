@@ -32,6 +32,9 @@ class _DatieveAppState extends State<DatieveApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     state.addListener(_onState);
+    state.updatePlatformBrightness(
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    );
     state.init();
   }
 
@@ -39,7 +42,10 @@ class _DatieveAppState extends State<DatieveApp> with WidgetsBindingObserver {
 
   @override
   void didChangePlatformBrightness() {
-    if (state.settings.theme == 'system') setState(() {});
+    state.updatePlatformBrightness(
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    );
+    setState(() {});
   }
 
   @override

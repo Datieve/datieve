@@ -30,8 +30,9 @@
   --color-danger-line: #FECACA;
 }
 
+/* OS-level preference, used only when the user hasn't picked an explicit theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-bg: #141211;
     --color-panel: #1C1917;
     --color-panel-soft: #292524;
@@ -57,7 +58,37 @@
   }
 }
 
+/* Explicit in-app toggle wins in both directions, regardless of OS preference. */
+:root[data-theme="dark"] {
+  --color-bg: #141211;
+  --color-panel: #1C1917;
+  --color-panel-soft: #292524;
+  --color-panel-muted: #3D3835;
+  --color-ink: #FAF9F7;
+  --color-muted: #A8A29E;
+  --color-faint: #78716C;
+  --color-line: #3D3835;
+  --color-line-strong: #57534E;
+  --color-brand: #38BDF8;
+  --color-brand-hover: #7DD3FC;
+  --color-brand-solid: #0C4A6E;
+  --color-on-brand: #FFFFFF;
+  --color-success: #4ADE80;
+  --color-success-bg: #14240E;
+  --color-success-line: #1F4522;
+  --color-warn: #FBBF24;
+  --color-warn-bg: #2A1F08;
+  --color-warn-line: #4A3612;
+  --color-danger: #F87171;
+  --color-danger-bg: #2D1212;
+  --color-danger-line: #521E1E;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);
+}
+
+tr.row-selected {
+  background-color: var(--color-panel-muted);
 }

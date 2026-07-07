@@ -242,7 +242,26 @@ class DatieveState extends ChangeNotifier {
   StreamSubscription<FileSystemEvent>? _localDirWatcher;
   StreamSubscription<FileSystemEvent>? _localParentWatcher;
 
-  bool get isDark => settings.theme == 'dark';
+  Brightness platformBrightness = Brightness.light;
+
+  void updatePlatformBrightness(Brightness brightness) {
+    if (platformBrightness != brightness) {
+      platformBrightness = brightness;
+      notifyListeners();
+    }
+  }
+
+  bool get isDark {
+    switch (settings.theme) {
+      case 'dark':
+        return true;
+      case 'light':
+        return false;
+      default:
+        return platformBrightness == Brightness.dark;
+    }
+  }
+
   DatieveColors get colors =>
       isDark ? DatieveColors.dark : DatieveColors.light;
 
@@ -412,7 +431,7 @@ class DatieveState extends ChangeNotifier {
     agents = await discoverAgents();
     scanning = false;
     notifyListeners();
-    if (autoSelect && !_autoSelected && agents.length == 1) {
+    if (autoSelect && !_autoSelected && agents.isNotEmpty) {
       _autoSelected = true;
       await selectAgent(agents.first.ip, fingerprint: agents.first.fingerprint);
     }
@@ -556,12 +575,29 @@ class DatieveState extends ChangeNotifier {
     setupLoading = true;
     setupError = '';
     notifyListeners();
+    final adminCode = setup.adminCode.trim();
     try {
       setup = updateSetupState(state: _applySetupDefaults(setup));
       await setupFinalize();
-      loginShowCode = true;
-      loginAccounts = [];
       agent = getCurrentAgent();
+      loginAccounts = [];
+      loginError = '';
+      if (adminCode.isNotEmpty) {
+        session = await loginWithCode(code: adminCode);
+        _skipAutoCodeLogin = false;
+        final s = session;
+        if (s != null) {
+          loginAccounts = [
+            AccountDto(username: s.username, role: s.role, code: adminCode),
+          ];
+        }
+        loginShowCode = false;
+        await refreshFileManager();
+        _startSse();
+      } else {
+        loginShowCode = true;
+        loginCode = '';
+      }
     } catch (e) {
       setupError = e.toString();
     }
@@ -1191,7 +1227,7 @@ class DatieveState extends ChangeNotifier {
     }
     if (mode == 'nas') {
       if (agent == null) {
-        await refreshDiscovery();
+        await refreshDiscovery(autoSelect: true);
       } else if (session != null) {
         if (nasDirty) nasDirty = false;
         await refreshFileManager();
@@ -1945,7 +1981,7 @@ class DatieveState extends ChangeNotifier {
     if (p != null && p >= 1024 && p < 65536) {
       settings = saveScanPort(port: p);
       showPortInput = false;
-      refreshDiscovery();
+      refreshDiscovery(autoSelect: true);
     }
   }
 
