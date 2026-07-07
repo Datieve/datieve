@@ -2,13 +2,16 @@
 // All routes are under /api/fs and require an authenticated session.
 // Every path is validated through fs_access before any disk operation.
 use axum::{
+    body::Body,
     extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
     Extension, Json,
 };
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
+use tokio_util::io::ReaderStream;
 
 #[derive(Serialize)]
 struct BatchFailure {
@@ -104,6 +107,11 @@ pub struct RotateRequest {
 
 #[derive(Deserialize)]
 pub struct ReadFileQuery {
+    pub path: String,
+}
+
+#[derive(Deserialize)]
+pub struct DownloadQuery {
     pub path: String,
 }
 
@@ -692,4 +700,60 @@ pub async fn trash_paths(
     .map_err(|_| AppError::Internal("Task failed".into()))??;
 
     Ok(Json(result))
+}
+
+/// Streams a single file's bytes to the caller (used by the web UI's "Download" action,
+/// where there's no local filesystem to hand a path back to like the desktop app has).
+/// Reads in chunks via `ReaderStream` rather than buffering the whole file in memory,
+/// so this stays cheap for large files.
+pub async fn download_file(
+    State(state): State<AppState>,
+    Extension(session): Extension<SessionUser>,
+    Query(payload): Query<DownloadQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let data_dir = state.config.read().await.data_dir.clone();
+    let path = payload.path.clone();
+    let (file, canonical, len) = spawn_blocking(move || {
+        let conn = state.db.get()?;
+        let authorized = authorize_path(&conn, &session, &path, &data_dir)?;
+        let meta = authorized
+            .canonical
+            .symlink_metadata()
+            .map_err(|e| map_fs_error(e, "read", &authorized.canonical))?;
+        if meta.is_dir() {
+            return Err(AppError::BadRequest("Path is a directory.".into()));
+        }
+        let file = std::fs::File::open(&authorized.canonical)
+            .map_err(|e| map_fs_error(e, "read", &authorized.canonical))?;
+        Ok::<_, AppError>((file, authorized.canonical, meta.len()))
+    })
+    .await
+    .map_err(|_| AppError::Internal("Task failed".into()))??;
+
+    let stream = ReaderStream::new(tokio::fs::File::from_std(file));
+    let body = Body::from_stream(stream);
+
+    let file_name = canonical
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("download")
+        .to_string();
+    let ascii_fallback: String = file_name
+        .chars()
+        .map(|c| if c.is_ascii() { c } else { '_' })
+        .collect();
+    let encoded = utf8_percent_encode(&file_name, NON_ALPHANUMERIC).to_string();
+    let disposition = format!(
+        "attachment; filename=\"{}\"; filename*=UTF-8''{}",
+        ascii_fallback.replace('"', "'"),
+        encoded
+    );
+    let mime = mime_guess::from_path(&canonical).first_or_octet_stream();
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, mime.as_ref())
+        .header(header::CONTENT_DISPOSITION, disposition)
+        .header(header::CONTENT_LENGTH, len)
+        .body(body)
+        .map_err(|e| AppError::Internal(e.to_string()))
 }

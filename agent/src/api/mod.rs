@@ -16,6 +16,7 @@ use crate::db::pool::DbPool;
 
 pub mod admin;
 pub mod auth;
+pub mod bookmarks;
 pub mod browse;
 pub mod fs;
 pub mod fs_access;
@@ -188,6 +189,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/fs/read", get(fs::read_file))
         .route("/fs/write", post(fs::write_file))
         .route("/fs/trash", post(fs::trash_paths))
+        .route("/fs/download", get(fs::download_file))
+        .route(
+            "/bookmarks",
+            get(bookmarks::list_bookmarks).post(bookmarks::create_bookmark),
+        )
+        .route("/bookmarks/:id", delete(bookmarks::delete_bookmark))
         .nest(
             "/admin",
             admin_routes.layer(axum::middleware::from_fn(middleware::require_admin)),
@@ -201,6 +208,7 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .nest("/api", public_api)
         .nest("/api", protected_api)
+        .fallback(crate::static_web::static_handler)
         .layer(ConcurrencyLimitLayer::new(max_concurrency))
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         .layer(TimeoutLayer::new(Duration::from_secs(30)))

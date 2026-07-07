@@ -21,3 +21,4 @@ pub mod db;
 pub mod engine;
 pub mod error;
 pub mod indexer;
+pub mod static_web;

@@ -5,6 +5,9 @@ Files/
 target/
 **/*.rs.bk
 
+# ─── Web UI build tooling (dist/ is the committed, embedded build output) ───
+agent/web/node_modules/
+
 # ─── Flutter / Dart ──────────────────────────────────────────────────────────
 app-flutter/.dart_tool/
 app-flutter/build/

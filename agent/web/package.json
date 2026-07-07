@@ -1,0 +1,11 @@
+{
+  "name": "datieve-web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tailwindcss -i ./input.css -o ./dist/styles.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

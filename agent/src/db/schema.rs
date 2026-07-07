@@ -286,5 +286,19 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_used_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Saved shortcuts into the browse tree (web UI "bookmarks"). Owned either by
+-- the single admin (role = 'admin', user_id NULL) or by a specific user.
+CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    scope_tag TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL, -- 'folder' or 'file'
+    target_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_owner ON bookmarks(role, user_id, scope_tag);
+
 
 "##;

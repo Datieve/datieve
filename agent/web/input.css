@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mirrors app-flutter/lib/theme/datieve_theme.dart exactly, so the web UI
+   matches the desktop app's light/dark palettes without duplicating a design
+   system. */
+:root {
+  --color-bg: #FAF9F7;
+  --color-panel: #FFFFFF;
+  --color-panel-soft: #F5F4F2;
+  --color-panel-muted: #EDE9E6;
+  --color-ink: #1C1917;
+  --color-muted: #78716C;
+  --color-faint: #A8A29E;
+  --color-line: #E7E5E4;
+  --color-line-strong: #D6D3D1;
+  --color-brand: #0EA5E9;
+  --color-brand-hover: #0284C7;
+  --color-brand-solid: #075985;
+  --color-on-brand: #FFFFFF;
+  --color-success: #16A34A;
+  --color-success-bg: #F0FDF4;
+  --color-success-line: #BBF7D0;
+  --color-warn: #B45309;
+  --color-warn-bg: #FFFBEB;
+  --color-warn-line: #FDE68A;
+  --color-danger: #B91C1C;
+  --color-danger-bg: #FEF2F2;
+  --color-danger-line: #FECACA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #141211;
+    --color-panel: #1C1917;
+    --color-panel-soft: #292524;
+    --color-panel-muted: #3D3835;
+    --color-ink: #FAF9F7;
+    --color-muted: #A8A29E;
+    --color-faint: #78716C;
+    --color-line: #3D3835;
+    --color-line-strong: #57534E;
+    --color-brand: #38BDF8;
+    --color-brand-hover: #7DD3FC;
+    --color-brand-solid: #0C4A6E;
+    --color-on-brand: #FFFFFF;
+    --color-success: #4ADE80;
+    --color-success-bg: #14240E;
+    --color-success-line: #1F4522;
+    --color-warn: #FBBF24;
+    --color-warn-bg: #2A1F08;
+    --color-warn-line: #4A3612;
+    --color-danger: #F87171;
+    --color-danger-bg: #2D1212;
+    --color-danger-line: #521E1E;
+  }
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+}
