@@ -214,10 +214,9 @@ impl WriterState {
                     is_symlink,
                     scan_generation,
                 } => {
-                    let effective_scan_generation = scan_generation.or_else(|| {
-                        Self::active_scan_generation(&tx, scope, watched_folder_id)
-                            .ok()
-                            .flatten()
+                    let effective_scan_generation = scan_generation.unwrap_or_else(|| {
+                        Self::watched_folder_scan_generation(&tx, scope, watched_folder_id)
+                            .unwrap_or(0)
                     });
                     let parent_path = std::path::Path::new(&path)
                         .parent()
@@ -230,6 +229,7 @@ impl WriterState {
                         scope,
                         watched_folder_id,
                         parent_path,
+                        Some(effective_scan_generation),
                     )?;
 
                     let current_info: Option<(i64, i64, i64, String, String)> = select_active_file
@@ -246,17 +246,15 @@ impl WriterState {
                             && old_folder_id == folder_id
                             && old_size == size_bytes as i64
                         {
-                            if let Some(generation) = effective_scan_generation {
-                                tx.execute(
-                                    "UPDATE files
-                                     SET scan_generation = ?1,
-                                         last_seen_at = datetime('now'),
-                                         is_deleted = 0,
-                                         deleted_at = NULL
-                                     WHERE id = ?2 AND scope_tag = ?3",
-                                    params![generation, id, scope],
-                                )?;
-                            }
+                            tx.execute(
+                                "UPDATE files
+                                 SET scan_generation = ?1,
+                                     last_seen_at = datetime('now'),
+                                     is_deleted = 0,
+                                     deleted_at = NULL
+                                 WHERE id = ?2 AND scope_tag = ?3",
+                                params![effective_scan_generation, id, scope],
+                            )?;
                             continue;
                         }
 
@@ -321,7 +319,7 @@ impl WriterState {
                             device_id,
                             inode,
                             is_symlink as i64,
-                            effective_scan_generation.unwrap_or_default(),
+                            effective_scan_generation,
                             absolute_path
                         ])?;
                         let id = tx.last_insert_rowid();
@@ -347,10 +345,9 @@ impl WriterState {
                     scan_generation,
                     created_at,
                 } => {
-                    let effective_scan_generation = scan_generation.or_else(|| {
-                        Self::active_scan_generation(&tx, scope, watched_folder_id)
-                            .ok()
-                            .flatten()
+                    let effective_scan_generation = scan_generation.unwrap_or_else(|| {
+                        Self::watched_folder_scan_generation(&tx, scope, watched_folder_id)
+                            .unwrap_or(0)
                     });
                     let parent_path = std::path::Path::new(&path)
                         .parent()
@@ -363,6 +360,7 @@ impl WriterState {
                         scope,
                         watched_folder_id,
                         parent_path,
+                        Some(effective_scan_generation),
                     )?;
 
                     let safe_name = sanitize_for_hierarchy(&name);
@@ -403,7 +401,7 @@ impl WriterState {
                         tx.execute(
 	                            "INSERT INTO folders (name, scope_tag, parent_id, watched_folder_id, device_id, inode, scan_generation, indexed_at, created_at) \
 	                             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)",
-	                            params![&safe_name, scope, parent_id, watched_folder_id, device_id, inode, effective_scan_generation.unwrap_or_default(), created_at_str],
+	                            params![&safe_name, scope, parent_id, watched_folder_id, device_id, inode, effective_scan_generation, created_at_str],
 	                        )?;
                         let id = tx.last_insert_rowid();
                         self.parent_cache.put(id, Some(parent_id));
@@ -427,6 +425,7 @@ impl WriterState {
                         scope,
                         watched_folder_id,
                         parent_path,
+                        None,
                     )?;
 
                     let row: Option<(i64, i64)> = tx.query_row(
@@ -468,6 +467,7 @@ impl WriterState {
                         scope,
                         watched_folder_id,
                         parent_path,
+                        None,
                     )?;
 
                     let folder_id: Option<i64> = tx.query_row(
@@ -683,6 +683,7 @@ impl WriterState {
         scope: &str,
         watched_folder_id: i64,
         dir_path: &str,
+        scan_generation: Option<i64>,
     ) -> Result<i64, AppError> {
         let key = (watched_folder_id, dir_path.to_string());
         if let Some(&id) = folder_cache.get(&key) {
@@ -707,18 +708,26 @@ impl WriterState {
             let new_id = if let Some(id) = row {
                 id
             } else {
+                let generation = scan_generation.unwrap_or(0);
                 tx.execute(
-                    "INSERT INTO folders (name, scope_tag, parent_id, watched_folder_id, indexed_at) VALUES (?, ?, ?, ?, datetime('now'))",
-                    params![&safe, scope, current_parent_id, watched_folder_id],
+                    "INSERT INTO folders (name, scope_tag, parent_id, watched_folder_id, scan_generation, indexed_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
+                    params![&safe, scope, current_parent_id, watched_folder_id, generation],
                 )?;
                 let id = tx.last_insert_rowid();
                 parent_cache.put(id, current_parent_id);
                 id
             };
-            tx.execute(
-                "UPDATE folders SET is_deleted = 0, deleted_at = NULL WHERE id = ?",
-                [new_id],
-            )?;
+            if let Some(generation) = scan_generation {
+                tx.execute(
+                    "UPDATE folders SET is_deleted = 0, deleted_at = NULL, scan_generation = ? WHERE id = ?",
+                    params![generation, new_id],
+                )?;
+            } else {
+                tx.execute(
+                    "UPDATE folders SET is_deleted = 0, deleted_at = NULL WHERE id = ?",
+                    [new_id],
+                )?;
+            }
             current_parent_id = Some(new_id);
         }
         let final_id = current_parent_id.unwrap();
@@ -726,27 +735,19 @@ impl WriterState {
         Ok(final_id)
     }
 
-    fn active_scan_generation(
+    /// Returns the watched folder's current scan_generation so live inotify events
+    /// are tagged with the same generation the next ScanComplete will reconcile against.
+    fn watched_folder_scan_generation(
         tx: &Transaction<'_>,
         scope: &str,
         watched_folder_id: i64,
-    ) -> Result<Option<i64>, AppError> {
-        let row: Option<(String, i64)> = tx
-            .query_row(
-                "SELECT scan_status, scan_generation
-                 FROM watched_folders
-                 WHERE id = ?1 AND scope_tag = ?2",
-                params![watched_folder_id, scope],
-                |row| Ok((row.get(0)?, row.get(1)?)),
-            )
-            .optional()?;
-        Ok(row.and_then(|(status, generation)| {
-            if status == "scanning" {
-                Some(generation)
-            } else {
-                None
-            }
-        }))
+    ) -> Result<i64, AppError> {
+        tx.query_row(
+            "SELECT scan_generation FROM watched_folders WHERE id = ?1 AND scope_tag = ?2",
+            params![watched_folder_id, scope],
+            |row| row.get(0),
+        )
+        .map_err(AppError::Database)
     }
 }
 

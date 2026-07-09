@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.7", features = ["macros", "multipart"] }
 tower = { version = "0.4", features = ["limit"] }
 tower-http = { version = "0.5", features = ["cors", "limit", "request-id", "trace", "timeout"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
@@ -31,6 +31,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 governor = "0.6"
 sha2 = "0.10"
+sha1 = "0.10"
+md-5 = "0.10"
+crc32fast = "1.4"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 secrecy = "0.8.0"
 percent-encoding = "2.3"

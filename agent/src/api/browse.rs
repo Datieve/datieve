@@ -96,7 +96,17 @@ pub async fn browse(
         let fl = params.file_limit.unwrap_or(BROWSE_RESPONSE_LIMIT).clamp(1, BROWSE_RESPONSE_LIMIT);
         let fo = params.file_offset.unwrap_or(0).max(0);
 
-        if let Some(pid) = params.parent_id {
+        // Single entry point: expand straight into its contents at Home so the
+        // watched-root row never appears twice (Home tile + child with same path).
+        let browse_parent = params.parent_id.or_else(|| {
+            if session.entry_folder_ids.len() == 1 {
+                session.entry_folder_ids.first().copied()
+            } else {
+                None
+            }
+        });
+
+        if let Some(pid) = browse_parent {
             // 1. Resolve the path of the current folder using a Recursive CTE
             let current_path: String = conn.query_row(
                 "WITH RECURSIVE path_builder(id, name, parent_id, level) AS (
@@ -191,9 +201,10 @@ pub async fn browse(
             })?;
             for f in f_rows {
                 let f = f?;
-                if !hidden_names.contains(&f.name) {
-                    folders.push(f);
+                if hidden_names.contains(&f.name) {
+                    continue;
                 }
+                folders.push(f);
             }
 
             // 4. Fetch Files (fetch fl+1 to detect whether more exist beyond this page)

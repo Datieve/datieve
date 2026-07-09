@@ -6,141 +6,111 @@
 <title>Datieve</title>
 <link rel="stylesheet" href="/styles.css" />
 </head>
-<body class="text-sm">
+<body class="text-sm antialiased overflow-hidden h-screen">
 
-<div id="login-screen" class="hidden min-h-screen flex items-center justify-center px-4">
-  <div class="w-full max-w-xs rounded-2xl border border-line bg-panel p-6 shadow-sm">
+<!-- Login -->
+<div id="phase-login" class="hidden h-full flex items-center justify-center px-4 bg-bg">
+  <div class="w-full max-w-sm rounded-2xl border border-line bg-panel p-6 shadow-sm">
     <div class="flex items-center justify-between mb-1">
       <h1 class="text-base font-bold" id="login-title">Datieve</h1>
-      <button id="theme-toggle-btn" type="button" class="text-muted hover:text-brand transition-colors" title="Toggle theme"></button>
+      <button id="login-theme-btn" type="button" class="text-muted hover:text-brand" title="Toggle theme"></button>
     </div>
-    <p class="text-xs text-muted mb-4" id="login-subtitle">Enter your access code</p>
-
+    <p class="text-xs text-muted mb-4">Enter your access code</p>
     <div id="account-list" class="hidden space-y-1.5 mb-3"></div>
-    <button id="login-use-different-code" class="hidden w-full text-center text-xs text-brand hover:text-brand-hover mb-3 transition-colors">
-      Use a different code
-    </button>
-
+    <button id="login-different-code" class="hidden w-full text-xs text-brand mb-3">Use a different code</button>
     <form id="login-form">
       <input id="login-code" type="password" autocomplete="off" placeholder="Access code"
-             class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm mb-3 outline-none focus:border-brand" />
-      <button type="submit"
-              class="w-full rounded-lg bg-brand-solid text-on-brand text-sm font-medium py-2 hover:bg-brand-hover transition-colors">
-        Sign in
-      </button>
+             class="w-full rounded-lg border border-line bg-bg px-3 py-2 mb-3 outline-none focus:border-brand" />
+      <button type="submit" class="w-full rounded-lg bg-brand-solid text-on-brand py-2 font-medium hover:bg-brand-hover">Sign in</button>
     </form>
-    <button id="login-back-to-accounts" class="hidden w-full text-center text-xs text-muted hover:text-ink mt-3 transition-colors">
-      &larr; Back to accounts
-    </button>
+    <button id="login-back-accounts" class="hidden w-full text-xs text-muted mt-3">&larr; Back to accounts</button>
     <p id="login-error" class="text-xs text-danger mt-3 hidden"></p>
   </div>
 </div>
 
-<div id="setup-screen" class="hidden min-h-screen flex items-center justify-center px-4 py-10 overflow-y-auto">
+<!-- Setup -->
+<div id="phase-setup" class="hidden h-full overflow-y-auto flex items-center justify-center px-4 py-8 bg-bg">
   <div class="w-full max-w-2xl rounded-2xl border border-line bg-panel p-6 shadow-sm my-auto">
-    <div class="flex items-center justify-between mb-1">
+    <div class="flex justify-between mb-1">
       <h1 class="text-base font-bold">Set up <span id="setup-hostname" class="text-muted font-normal"></span></h1>
-      <button id="theme-toggle-btn-setup" type="button" class="text-muted hover:text-brand transition-colors" title="Toggle theme"></button>
+      <button id="setup-theme-btn" type="button" class="text-muted hover:text-brand"></button>
     </div>
-    <p class="text-xs text-muted mb-5">First-time configuration for this agent. This only needs to be done once.</p>
-
-    <section class="mb-5">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Admin account</h2>
+    <p class="text-xs text-muted mb-5">First-time configuration. Done once per agent.</p>
+    <section class="mb-4">
+      <h2 class="text-xs font-semibold uppercase text-muted mb-2">Admin account</h2>
       <div class="grid grid-cols-2 gap-3">
-        <label class="flex flex-col gap-1 text-xs">
-          <span class="text-muted">Admin username</span>
-          <input id="setup-admin-username" type="text" value="admin" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" />
-        </label>
-        <label class="flex flex-col gap-1 text-xs">
-          <span class="text-muted">Admin access code</span>
-          <input id="setup-admin-code" type="password" autocomplete="off" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" />
-        </label>
+        <label class="text-xs flex flex-col gap-1"><span class="text-muted">Username</span>
+          <input id="setup-admin-user" value="admin" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" /></label>
+        <label class="text-xs flex flex-col gap-1"><span class="text-muted">Access code</span>
+          <input id="setup-admin-code" type="password" class="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-brand" /></label>
       </div>
     </section>
-
-    <section class="mb-5">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Watched folders</h2>
-      <p class="text-[11px] text-faint mb-2">Absolute paths on this machine to index (e.g. /mnt/storage/media).</p>
-      <div id="setup-folders-list" class="space-y-2 mb-2"></div>
-      <button id="setup-add-folder" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add path</button>
+    <section class="mb-4">
+      <h2 class="text-xs font-semibold uppercase text-muted mb-2">Watched folders</h2>
+      <div id="setup-folders" class="space-y-2 mb-2"></div>
+      <button id="setup-add-folder" type="button" class="text-xs text-brand">+ Add path</button>
     </section>
-
-    <section class="mb-5">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Exclusions</h2>
+    <section class="mb-4">
+      <h2 class="text-xs font-semibold uppercase text-muted mb-2">Exclusions</h2>
       <label class="flex items-center gap-2 text-xs mb-2">
         <input id="setup-exclude-hidden" type="checkbox" checked class="rounded border-line" />
-        <span class="text-muted">Exclude hidden files (dotfiles)</span>
+        <span class="text-muted">Exclude hidden files</span>
       </label>
-      <div id="setup-patterns-list" class="space-y-2 mb-2"></div>
-      <button id="setup-add-pattern" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add exclusion pattern</button>
+      <div id="setup-patterns" class="space-y-2 mb-2"></div>
+      <button id="setup-add-pattern" type="button" class="text-xs text-brand">+ Add pattern</button>
     </section>
-
-    <section class="mb-5">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Additional users (optional)</h2>
-      <div id="setup-users-list" class="space-y-3 mb-2"></div>
-      <button id="setup-add-user" type="button" class="text-xs text-brand hover:text-brand-hover transition-colors">+ Add user</button>
+    <section class="mb-4">
+      <h2 class="text-xs font-semibold uppercase text-muted mb-2">Management password</h2>
+      <input id="setup-manage-pwd" type="password" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-xs outline-none focus:border-brand" />
     </section>
-
-    <section class="mb-5">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Management password</h2>
-      <p class="text-[11px] text-faint mb-2">A separate password guarding sensitive settings changes, independent of access codes.</p>
-      <input id="setup-manage-password" type="password" autocomplete="off" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-xs outline-none focus:border-brand" />
-    </section>
-
     <p id="setup-error" class="text-xs text-danger mb-3 hidden"></p>
-    <button id="setup-submit" class="w-full rounded-lg bg-brand-solid text-on-brand text-sm font-medium py-2 hover:bg-brand-hover transition-colors">Deploy</button>
+    <button id="setup-submit" type="button" class="w-full rounded-lg bg-brand-solid text-on-brand py-2 font-medium hover:bg-brand-hover">Deploy</button>
   </div>
 </div>
 
-<div id="app-shell" class="hidden min-h-screen flex flex-col">
-  <header class="relative flex items-center gap-3 border-b border-line bg-panel px-4 py-2">
-    <button id="home-btn" class="text-sm font-semibold shrink-0 hover:text-brand transition-colors">Datieve</button>
-    <div class="flex-1 min-w-0"></div>
-    <nav id="breadcrumbs" class="shrink max-w-[55%] flex items-center gap-0.5 h-8 px-1.5 rounded-lg border border-line bg-panel-muted overflow-x-auto whitespace-nowrap text-xs"></nav>
-    <div class="flex-1 min-w-0"></div>
-    <div class="relative shrink-0">
-      <button id="search-toggle-btn"
-              class="text-muted hover:text-brand transition-colors border border-line rounded-lg p-1.5 hover:border-line-strong"
-              title="Search"></button>
-      <div id="search-popover" class="hidden absolute right-0 top-full mt-1 w-64 rounded-xl border border-line bg-panel shadow-lg p-2 z-20">
-        <input id="search-input" type="search" placeholder="Search files…"
-               class="w-full rounded-lg border border-line bg-bg px-3 py-1.5 text-xs outline-none focus:border-brand" />
-      </div>
-    </div>
-    <button id="filters-toggle-btn"
-            class="shrink-0 text-muted hover:text-brand transition-colors border border-line rounded-lg p-1.5 hover:border-line-strong"
-            title="Filters"></button>
-    <button id="whoami" type="button" class="shrink-0 text-xs text-muted hidden sm:inline hover:text-brand transition-colors cursor-pointer" title="Switch account"></button>
-    <button id="manage-btn" type="button" class="hidden shrink-0 text-xs text-brand hover:text-brand-hover transition-colors">Manage</button>
-    <button id="logout-btn" class="shrink-0 text-xs text-danger hover:underline">Log out</button>
+<!-- File manager (mirrors Flutter file_manager_screen.dart shell) -->
+<div id="phase-app" class="hidden h-full flex flex-col bg-bg">
+  <!-- Toolbar (mirrors _TopHeader — 44px) -->
+  <header class="h-[44px] shrink-0 flex items-center gap-1 border-b border-line bg-panel px-2">
+    <span class="w-5 h-5 rounded bg-ink flex items-center justify-center shrink-0 mr-0.5"><span class="w-1.5 h-1.5 rounded-sm bg-panel"></span></span>
+    <button id="btn-back" class="fm-tool-btn" title="Back (Alt+←)" disabled></button>
+    <button id="btn-forward" class="fm-tool-btn" title="Forward (Alt+→)" disabled></button>
+    <button id="btn-up" class="fm-tool-btn" title="Up (Alt+↑)"></button>
+    <button id="btn-refresh" class="fm-tool-btn" title="Refresh (F5)"></button>
+    <nav id="breadcrumbs" class="flex-1 min-w-0 flex items-center gap-0.5 overflow-x-auto whitespace-nowrap px-1 text-xs"></nav>
+    <input id="search-input" type="search" placeholder="Search NAS… (Enter)"
+           class="w-44 shrink-0 rounded-lg border border-line bg-bg px-2 py-1 text-xs outline-none focus:border-brand hidden sm:block" />
+    <button id="btn-view" class="fm-tool-btn" title="Toggle list / grid view"></button>
+    <button id="btn-filters" class="fm-tool-btn" title="Filters"></button>
+    <button id="btn-settings" class="fm-tool-btn" title="Settings"></button>
+    <span id="sync-dot" class="hidden w-2 h-2 rounded-full bg-warn shrink-0" title="Syncing"></span>
+    <span id="user-label" class="text-[11px] text-muted shrink-0 hidden md:inline max-w-[5rem] truncate"></span>
+    <button id="btn-logout" class="fm-tool-btn text-muted hover:text-danger shrink-0" title="Sign out"></button>
   </header>
 
-  <div id="filters-panel" class="hidden border-b border-line bg-panel-soft px-4 py-2">
-    <div class="flex flex-wrap items-end gap-4">
+  <!-- Filters strip (FmFiltersPanel) -->
+  <div id="filters-panel" class="hidden shrink-0 border-b border-line bg-panel-soft px-3 py-2">
+    <div class="flex flex-wrap items-end gap-3 text-xs">
       <div class="flex flex-col gap-1">
-        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Size</span>
-        <div class="flex items-center gap-1.5">
-          <input id="filter-size-min" type="number" min="0" placeholder="0" class="w-14 rounded-md border border-line bg-panel px-1.5 py-1 text-xs outline-none focus:border-brand" />
-          <span class="text-muted text-xs">–</span>
-          <input id="filter-size-max" type="number" min="0" placeholder="&#8734;" class="w-14 rounded-md border border-line bg-panel px-1.5 py-1 text-xs outline-none focus:border-brand" />
-          <select id="filter-size-unit" class="rounded-md border border-line bg-panel px-1 py-1 text-xs outline-none focus:border-brand">
-            <option value="KB">KB</option>
-            <option value="MB" selected>MB</option>
-            <option value="GB">GB</option>
-          </select>
+        <span class="fm-filter-label">SIZE</span>
+        <div class="flex items-center gap-1">
+          <input id="f-size-min" type="number" min="0" placeholder="0" class="fm-filter-input w-16" />
+          <span class="text-muted">–</span>
+          <input id="f-size-max" type="number" min="0" placeholder="∞" class="fm-filter-input w-16" />
+          <select id="f-size-unit" class="fm-filter-input w-14"><option>KB</option><option selected>MB</option><option>GB</option></select>
         </div>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Created</span>
-        <select id="filter-created-range" class="w-36 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand"></select>
+        <span class="fm-filter-label">CREATED</span>
+        <select id="f-created" class="fm-filter-input w-36"></select>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Modified</span>
-        <select id="filter-modified-range" class="w-36 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand"></select>
+        <span class="fm-filter-label">MODIFIED</span>
+        <select id="f-modified" class="fm-filter-input w-36"></select>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-[9px] font-black tracking-wider text-muted uppercase">Type</span>
-        <select id="filter-type" class="w-32 rounded-md border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-brand">
+        <span class="fm-filter-label">TYPE</span>
+        <select id="f-type" class="fm-filter-input w-32">
           <option value="all">All items</option>
           <option value="folders">Folders</option>
           <option value="files">Files</option>
@@ -150,74 +120,134 @@
           <option value="archives">Archives</option>
         </select>
       </div>
-      <label class="flex items-center gap-1.5 pb-1">
-        <input id="filter-include-deleted" type="checkbox" class="rounded border-line" />
-        <span class="text-muted text-xs">Include deleted</span>
+      <label id="f-deleted-wrap" class="hidden flex items-center gap-1.5 pb-0.5">
+        <input id="f-include-deleted" type="checkbox" class="rounded border-line" />
+        <span class="text-muted">Show deleted</span>
       </label>
-      <button id="filters-apply" class="h-[26px] rounded-md bg-brand-solid text-on-brand px-3 text-xs font-semibold hover:bg-brand-hover transition-colors">Apply</button>
-      <button id="filters-clear" class="text-xs text-muted hover:text-ink transition-colors">Clear</button>
+      <button id="f-apply-search" class="hidden h-7 rounded-md bg-brand-solid text-on-brand px-3 text-xs font-semibold">Apply</button>
+      <button id="f-clear" class="text-xs text-muted hover:text-ink">Clear</button>
     </div>
   </div>
 
   <div class="flex flex-1 min-h-0">
-    <aside class="w-52 shrink-0 border-r border-line bg-panel-soft p-3 overflow-y-auto hidden md:block">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-xs font-semibold text-muted uppercase tracking-wide">Bookmarks</h2>
-        <button id="bookmark-here-btn"
-                class="flex items-center gap-1 text-xs text-brand hover:text-brand-hover transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                title="Bookmark current folder"></button>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-52 shrink-0 border-r border-line bg-panel-soft overflow-y-auto hidden md:flex flex-col">
+      <div class="p-3 flex-1">
+        <h2 class="text-[10px] font-black tracking-wider text-muted uppercase mb-2">Bookmarks</h2>
+        <ul id="bookmarks-list" class="space-y-0.5"></ul>
+        <p id="bookmarks-empty" class="text-xs text-faint hidden">No bookmarks</p>
       </div>
-      <ul id="bookmarks-list" class="space-y-1"></ul>
-      <p id="bookmarks-empty" class="text-xs text-faint mt-2 hidden">No bookmarks yet.</p>
     </aside>
 
-    <main class="flex-1 overflow-y-auto p-4 min-w-0">
-      <div id="status-line" class="text-xs text-muted mb-2"></div>
-      <table class="w-full text-xs border-collapse" id="entries-table">
-        <thead class="text-left text-muted border-b border-line">
-          <tr>
-            <th class="py-1.5 pr-2 font-medium">Name</th>
-            <th class="py-1.5 pr-2 font-medium w-24">Size</th>
-            <th class="py-1.5 pr-2 font-medium w-40">Modified</th>
-            <th class="py-1.5 font-medium w-20"></th>
-          </tr>
-        </thead>
-        <tbody id="entries-body"></tbody>
-      </table>
-      <button id="load-more-btn" class="hidden mt-3 text-xs text-brand hover:text-brand-hover transition-colors">Load more</button>
+    <!-- Main content -->
+    <main class="flex-1 min-w-0 flex flex-col min-h-0">
+      <div id="file-panel" class="flex-1 overflow-y-auto min-h-0 outline-none relative" tabindex="0">
+        <div id="drop-overlay" class="hidden absolute inset-0 z-10 pointer-events-none border-2 border-dashed border-brand bg-brand/10 flex items-center justify-center">
+          <p class="text-sm font-semibold text-brand">Drop files to upload here</p>
+        </div>
+        <div id="file-list" class="divide-y divide-line"></div>
+        <button id="load-more-btn" class="hidden w-full py-2 text-xs text-brand hover:bg-panel-soft">Load more files…</button>
+        <p id="empty-msg" class="hidden py-12 text-center text-faint text-xs">Empty folder</p>
+        <p id="loading-msg" class="hidden py-12 text-center text-muted text-xs">Loading…</p>
+      </div>
+      <!-- Status bar (FmStatusBar) -->
+      <footer id="status-bar" class="h-7 shrink-0 flex items-center px-3 border-t border-line bg-panel text-[11px] text-muted gap-2">
+        <span id="status-count">0 items</span>
+        <span id="status-selection" class="hidden"></span>
+        <span id="status-clipboard" class="hidden"></span>
+        <span class="flex-1"></span>
+        <span id="status-zoom" class="text-muted shrink-0">Zoom: 100%</span>
+        <span id="status-hint" class="hidden lg:inline text-faint truncate ml-2">F5 · Ctrl+± zoom · Space properties · Ctrl+/ shortcuts</span>
+      </footer>
     </main>
   </div>
 </div>
 
-<div id="manage-overlay" class="hidden fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="w-full max-w-3xl max-h-[90vh] rounded-2xl border border-line bg-panel shadow-lg flex flex-col overflow-hidden">
-    <div class="flex items-center justify-between border-b border-line px-4 py-3 shrink-0">
-      <h2 class="text-sm font-semibold">Management Console</h2>
-      <button id="manage-close-btn" type="button" class="text-muted hover:text-ink transition-colors" title="Close"></button>
+<!-- Context menu -->
+<div id="ctx-menu" class="hidden fixed z-50 min-w-[11rem] rounded-lg border border-line bg-panel shadow-lg py-1 text-xs"></div>
+<div id="ctx-submenu" class="hidden fixed z-50 min-w-[10rem] rounded-lg border border-line bg-panel shadow-lg py-1 text-xs"></div>
+
+<!-- Modals -->
+<div id="modal-overlay" class="hidden fixed inset-0 z-40 bg-bg/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="modal-box" class="w-full max-w-sm rounded-xl border border-line bg-panel p-4 shadow-lg"></div>
+</div>
+
+<div id="admin-overlay" class="hidden fixed inset-0 z-50 bg-panel flex flex-col overflow-hidden">
+  <div id="admin-gate" class="flex-1 flex items-center justify-center p-6">
+    <div class="w-full max-w-sm">
+      <div class="flex items-center gap-2 mb-2">
+        <h2 class="text-base font-bold flex-1">Management Console</h2>
+        <button id="admin-close-gate" type="button" class="text-muted hover:text-ink p-1"></button>
+      </div>
+      <p class="text-xs text-muted mb-4">Enter the management code to access admin controls.</p>
+      <p id="admin-gate-err" class="text-xs text-danger mb-3 hidden rounded-lg border border-danger-line bg-danger-bg px-3 py-2"></p>
+      <input id="admin-gate-pwd" type="password" placeholder="Management code"
+             class="w-full rounded-lg border border-line bg-panel-soft px-3 py-2.5 text-sm font-mono mb-3 outline-none focus:border-brand" />
+      <button id="admin-gate-btn" class="w-full rounded-lg bg-ink text-on-brand py-2.5 text-sm font-semibold hover:opacity-90">Unlock</button>
     </div>
-    <div id="manage-gate" class="p-6 overflow-y-auto">
-      <p class="text-xs text-muted mb-3">Enter the management password to change agent settings.</p>
-      <input id="manage-gate-password" type="password" autocomplete="off" placeholder="Management password"
-             class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm mb-3 outline-none focus:border-brand" />
-      <p id="manage-gate-error" class="text-xs text-danger mb-3 hidden"></p>
-      <button id="manage-gate-submit" type="button"
-              class="w-full rounded-lg bg-brand-solid text-on-brand text-sm font-medium py-2 hover:bg-brand-hover transition-colors">Unlock</button>
-    </div>
-    <div id="manage-body" class="hidden flex flex-col min-h-0 flex-1">
-      <div id="manage-tabs" class="flex gap-1 border-b border-line px-4 py-2 shrink-0 overflow-x-auto text-xs"></div>
-      <div id="manage-content" class="p-4 overflow-y-auto flex-1 text-xs"></div>
-      <div class="border-t border-line px-4 py-2 shrink-0 flex items-center gap-2">
-        <input id="manage-save-password" type="password" autocomplete="off" placeholder="Management password to save"
-               class="flex-1 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs outline-none focus:border-brand" />
-        <button id="manage-save-btn" type="button"
-                class="rounded-lg bg-brand-solid text-on-brand px-3 py-1.5 text-xs font-medium hover:bg-brand-hover transition-colors">Save</button>
+  </div>
+  <div id="admin-body" class="hidden flex flex-col min-h-0 flex-1">
+    <header class="h-10 shrink-0 flex items-center gap-2 border-b border-line bg-panel-soft px-3">
+      <span class="w-5 h-5 rounded bg-ink flex items-center justify-center shrink-0"><span class="w-1.5 h-1.5 rounded-sm bg-panel"></span></span>
+      <h2 class="text-sm font-bold flex-1">Management Console</h2>
+      <button id="admin-close" type="button" class="text-muted hover:text-ink p-1"></button>
+    </header>
+    <div class="flex flex-1 min-h-0">
+      <nav id="admin-tabs" class="w-44 shrink-0 border-r border-line bg-panel-soft overflow-y-auto text-xs"></nav>
+      <div class="flex-1 min-w-0 flex flex-col min-h-0">
+        <div class="h-10 shrink-0 flex items-center gap-2 border-b border-line px-4">
+          <span id="admin-tab-title" class="text-xs font-semibold text-muted flex-1"></span>
+          <div class="relative w-40">
+            <input id="admin-save-pwd" type="password" placeholder="Management password"
+                   class="w-full rounded border border-line bg-bg px-2.5 py-1.5 pr-7 text-xs outline-none focus:border-brand" />
+            <button id="admin-pwd-toggle" type="button" class="absolute right-1 top-1/2 -translate-y-1/2 text-faint hover:text-muted p-0.5" title="Show password"></button>
+          </div>
+          <button id="admin-save-btn" class="rounded bg-ink text-on-brand px-3 py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50">Save</button>
+        </div>
+        <p id="admin-error" class="hidden mx-3 mt-3 text-xs text-danger rounded-lg border border-danger-line bg-danger-bg px-3 py-2"></p>
+        <p id="admin-success" class="hidden mx-3 mt-3 text-xs text-success rounded-lg border border-success-line bg-success-bg px-3 py-2"></p>
+        <div id="admin-content" class="flex-1 overflow-y-auto text-xs min-h-0"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Settings (FmSettingsPanel) -->
+<div id="settings-overlay" class="hidden fixed inset-0 z-50 bg-panel flex flex-col overflow-hidden">
+  <header class="h-10 shrink-0 flex items-center gap-2 border-b border-line bg-panel-soft px-3">
+    <span class="w-5 h-5 rounded bg-ink flex items-center justify-center shrink-0"><span class="w-1.5 h-1.5 rounded-sm bg-panel"></span></span>
+    <h2 class="text-sm font-bold flex-1">Settings</h2>
+    <button id="settings-close" type="button" class="text-muted hover:text-ink p-1"></button>
+  </header>
+  <div class="flex flex-1 min-h-0">
+    <nav id="settings-tabs" class="w-44 shrink-0 border-r border-line bg-panel-soft overflow-y-auto text-xs"></nav>
+    <div id="settings-content" class="flex-1 overflow-y-auto text-xs min-h-0"></div>
+  </div>
+</div>
+
+<!-- Properties (FmPropertiesDialog — 520×620, same shell as desktop) -->
+<div id="properties-overlay" class="hidden fixed inset-0 z-50 fm-props-overlay flex items-center justify-center p-6">
+  <div id="properties-box" class="fm-props-dialog w-full flex flex-col overflow-hidden"></div>
+</div>
+
+<div id="shortcuts-overlay" class="hidden fixed inset-0 z-50 bg-bg/45 backdrop-blur-[2px] flex items-center justify-center p-6">
+  <div id="shortcuts-box" class="w-full max-w-md max-h-[calc(100vh-3rem)] rounded-2xl border border-line bg-panel shadow-xl flex flex-col overflow-hidden">
+    <div class="flex items-center gap-2 px-5 pt-4 pb-1 shrink-0">
+      <span id="shortcuts-icon" class="text-brand"></span>
+      <h2 class="text-[15px] font-bold flex-1">Keyboard Shortcuts</h2>
+      <button id="shortcuts-close" type="button" class="text-muted hover:text-ink p-1"></button>
+    </div>
+    <div class="px-4 pt-3 pb-1 shrink-0">
+      <input id="shortcuts-search" type="search" placeholder="Search shortcuts…"
+             class="w-full rounded-lg border border-line bg-panel-soft px-3 py-1.5 text-xs outline-none focus:border-brand" />
+    </div>
+    <div id="shortcuts-list" class="flex-1 overflow-y-auto px-4 py-2 min-h-0"></div>
   </div>
 </div>
 
 <div id="toast" class="hidden fixed bottom-4 right-4 rounded-lg border border-line bg-panel px-3 py-2 text-xs shadow-lg z-30"></div>
 
+<script src="/file_icons.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

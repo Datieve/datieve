@@ -3,7 +3,7 @@
 // Every path is validated through fs_access before any disk operation.
 use axum::{
     body::Body,
-    extract::{Query, State},
+    extract::{Multipart, Query, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
     Extension, Json,
@@ -756,4 +756,129 @@ pub async fn download_file(
         .header(header::CONTENT_LENGTH, len)
         .body(body)
         .map_err(|e| AppError::Internal(e.to_string()))
+}
+
+const MAX_UPLOAD_FILE_BYTES: usize = 512 * 1024 * 1024;
+
+/// Accepts browser drag-and-drop uploads as multipart form data.
+/// Fields: `dest_dir` (required), repeated `files` (binary), optional matching `relative_paths`.
+pub async fn upload_files(
+    State(state): State<AppState>,
+    Extension(session): Extension<SessionUser>,
+    mut multipart: Multipart,
+) -> Result<impl IntoResponse, AppError> {
+    let mut dest_dir = String::new();
+    let mut blobs: Vec<(String, bytes::Bytes)> = Vec::new();
+    let mut rel_paths: Vec<String> = Vec::new();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(format!("Invalid multipart payload: {e}")))?
+    {
+        match field.name().unwrap_or("") {
+            "dest_dir" => {
+                dest_dir = field
+                    .text()
+                    .await
+                    .map_err(|e| AppError::BadRequest(format!("dest_dir: {e}")))?;
+            }
+            "relative_paths" => {
+                let p = field
+                    .text()
+                    .await
+                    .map_err(|e| AppError::BadRequest(format!("relative_paths: {e}")))?;
+                rel_paths.push(p);
+            }
+            "files" | "file" => {
+                let fallback = field
+                    .file_name()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "upload".into());
+                let data = field
+                    .bytes()
+                    .await
+                    .map_err(|e| AppError::BadRequest(format!("file read: {e}")))?;
+                if data.len() > MAX_UPLOAD_FILE_BYTES {
+                    return Err(AppError::BadRequest(format!(
+                        "'{fallback}' exceeds max upload size (512 MB)."
+                    )));
+                }
+                blobs.push((fallback, data));
+            }
+            _ => {}
+        }
+    }
+
+    if dest_dir.trim().is_empty() {
+        return Err(AppError::BadRequest("dest_dir is required.".into()));
+    }
+    if blobs.is_empty() {
+        return Err(AppError::BadRequest("No files provided.".into()));
+    }
+
+    let mut uploads: Vec<(String, bytes::Bytes)> = Vec::with_capacity(blobs.len());
+    for (i, (fallback, data)) in blobs.into_iter().enumerate() {
+        let rel = rel_paths
+            .get(i)
+            .filter(|p| !p.trim().is_empty())
+            .cloned()
+            .unwrap_or(fallback);
+        uploads.push((rel, data));
+    }
+
+    tracing::info!(
+        user = ?session.username,
+        dest = %dest_dir,
+        count = uploads.len(),
+        "upload"
+    );
+
+    let data_dir = state.config.read().await.data_dir.clone();
+    let dest = dest_dir.clone();
+    let db = state.db.clone();
+    let _folder_guard =
+        crate::api::fs_access::acquire_folder_lock(&state.folder_locks, std::path::Path::new(&dest))
+            .await;
+
+    let result = spawn_blocking(move || {
+        let conn = db.get()?;
+        let parent = authorize_parent_for_create(&conn, &session, &dest, &data_dir)?;
+        let mut succeeded = Vec::new();
+        let mut failed = Vec::new();
+
+        for (rel, data) in uploads {
+            let rel_clean = rel.replace('\\', "/").trim_start_matches('/').to_string();
+            let item_result = (|| -> Result<String, AppError> {
+                if rel_clean.is_empty() || rel_clean.contains("..") {
+                    return Err(AppError::BadRequest("Invalid relative path.".into()));
+                }
+                let dest_path = parent.join(&rel_clean);
+                if let Some(name) = dest_path.file_name().and_then(|n| n.to_str()) {
+                    if !name.is_empty() && !is_safe_filename(name) {
+                        return Err(AppError::BadRequest(format!("Invalid file name: {name}")));
+                    }
+                }
+                if let Some(dir) = dest_path.parent() {
+                    std::fs::create_dir_all(dir)
+                        .map_err(|e| map_fs_error(e, "create", dir))?;
+                }
+                std::fs::write(&dest_path, &data)
+                    .map_err(|e| map_fs_error(e, "write", &dest_path))?;
+                Ok(dest_path.to_string_lossy().into_owned())
+            })();
+            match item_result {
+                Ok(p) => succeeded.push(p),
+                Err(e) => failed.push(BatchFailure {
+                    path: rel_clean,
+                    error: e.to_string(),
+                }),
+            }
+        }
+        Ok::<_, AppError>(BatchResult { succeeded, failed })
+    })
+    .await
+    .map_err(|_| AppError::Internal("Task failed".into()))??;
+
+    Ok(Json(result))
 }

@@ -20,6 +20,7 @@ pub mod bookmarks;
 pub mod browse;
 pub mod fs;
 pub mod fs_access;
+pub mod fs_props;
 pub mod middleware;
 pub mod search;
 
@@ -190,6 +191,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/fs/write", post(fs::write_file))
         .route("/fs/trash", post(fs::trash_paths))
         .route("/fs/download", get(fs::download_file))
+        .route("/fs/upload", post(fs::upload_files))
+        .route("/fs/properties", get(fs_props::get_properties))
+        .route("/fs/hashes", get(fs_props::get_hashes))
+        .route("/fs/volume", get(fs_props::get_volume))
+        .route("/fs/folder-summary", get(fs_props::get_folder_summary))
         .route(
             "/bookmarks",
             get(bookmarks::list_bookmarks).post(bookmarks::create_bookmark),

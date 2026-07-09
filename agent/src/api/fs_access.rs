@@ -74,7 +74,7 @@ fn relative_within_root(root: &Path, path: &Path) -> String {
         .unwrap_or_default()
 }
 
-fn user_can_access_relative(
+pub(crate) fn user_can_access_relative(
     conn: &Connection,
     session: &SessionUser,
     watched_folder_id: i64,
